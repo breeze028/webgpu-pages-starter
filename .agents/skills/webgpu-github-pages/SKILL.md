@@ -5,6 +5,8 @@ description: 为现有 WebGPU、WebGL 或静态图形学网页添加 GitHub Page
 
 # WebGPU / WebGL → GitHub Pages
 
+简体中文 | [English](SKILL.en.md)（英文入口及部署、排障参考）。需要英文时读取英文入口，不必同时加载两套参考。
+
 把当前项目变成可从 HTTPS URL 运行的静态站点，并用实际证据说明构建、发布、资源和 GPU 渲染分别是否成功。不要借部署任务替换渲染器、引入框架或重构无关代码。
 
 ## 先确认仓库事实
@@ -37,5 +39,7 @@ description: 为现有 WebGPU、WebGL 或静态图形学网页添加 GitHub Page
 - **独立验证**：若改了通用模板，在一个不同名称的临时项目里检查 base、产物目录和资源链；不要复用原项目 renderer 来冒充通用性验证。
 
 发生问题时按 [troubleshooting.md](references/troubleshooting.md) 的症状检查，不通过跳过检查、扩大权限或反复无依据重试掩盖失败。工具连续超时后尝试其受支持的另一检查方式；仍无法观察就标记未验证。
+
+计时扩展应先检测 adapter 特性，再向 device 请求 `timestamp-query`；计时仅为可选功能，失败可回退普通 device。使用 pass timestampWrites、对齐的 resolve buffer 和异步回读，说明覆盖哪些 pass、单位转换及浏览器量化限制。用户确认的线上行为应明确归因用户，不自动升级为 Agent 的 Console 审计。
 
 交付简洁 README 和实施记录：运行/发布命令、改名和自定义域名注意点、验证证据、失败原因及剩余限制。Skill 本身不授权创建新仓库、公开既有私有代码或更改访问范围；沿用当前用户的发布要求。

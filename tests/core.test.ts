@@ -28,6 +28,28 @@ test("capability failures distinguish insecure context, missing API, adapter and
   );
 });
 
+test("timestamp-query is requested only when supported and device rejection falls back", async () => {
+  for (const supported of [false, true]) {
+    const calls: GPUDeviceDescriptor[] = [];
+    const expected = {} as GPUDevice;
+    const adapter = {
+      features: new Set(supported ? ["timestamp-query"] : []),
+      requestDevice: async (descriptor: GPUDeviceDescriptor = {}) => {
+        calls.push(descriptor);
+        if (descriptor.requiredFeatures)
+          throw new Error("optional profiling rejected");
+        return expected;
+      },
+    };
+    const gpu = { requestAdapter: async () => adapter } as unknown as GPU;
+    assert.equal(await createDevice(true, gpu), expected);
+    assert.equal(calls.length, supported ? 2 : 1);
+    if (supported)
+      assert.deepEqual(calls[0].requiredFeatures, ["timestamp-query"]);
+    assert.equal(calls.at(-1)!.requiredFeatures, undefined);
+  }
+});
+
 test("Pages paths cover rename, user sites, metadata and local preview", () => {
   assert.equal(pagesBase({}), "/");
   assert.equal(

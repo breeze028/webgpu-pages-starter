@@ -1,5 +1,7 @@
 # GPU Field · webgpu-pages-starter
 
+简体中文 | [English](README.en.md)
+
 原生 WebGPU 的 1,000 个程序化立方体：Compute Frustum Culling → 可见索引压缩 → GPU Indirect Arguments → `drawIndirect()`。TypeScript + WGSL + Vite，无运行时依赖、渲染引擎或后端。
 
 ## 本地运行
@@ -14,11 +16,11 @@ npm run build
 npm run preview
 ```
 
-浏览器需支持 WebGPU，开发使用 localhost，线上使用 HTTPS。拖动画布 / 方向键旋转，滚轮缩放；面板支持剔除开关、相机重置与实例颜色 / 世界法线切换。可见数来自每 250 ms 的异步 GPU 回读，FPS 是浏览器帧率；未采集 GPU 时间。
+浏览器需支持 WebGPU，开发使用 localhost，线上使用 HTTPS。拖动画布 / 方向键旋转，滚轮缩放；面板支持剔除开关、相机重置与实例颜色 / 世界法线切换。可见数来自每 250 ms 的异步 GPU 回读，FPS 是浏览器帧率。GPU 时间使用可选的 `timestamp-query`，显示 Compute + Render Pass 耗时之和，不含排队、上传、回读和呈现；每 250 ms 最多一次异步采样。不支持时明确显示提示并继续渲染。浏览器时间戳可能量化，小负载可能显示 0.000 ms，不能当作跨设备基准。
 
 [在线 Demo](https://breeze028.github.io/webgpu-pages-starter/) · [发布工作流](https://github.com/breeze028/webgpu-pages-starter/actions/workflows/deploy.yml) · [实施与验证记录](docs/implementation-notes.md) · [可复用 Agent Skill](.agents/skills/webgpu-github-pages/SKILL.md)
 
-本地真实 WebGPU 渲染、生产子路径与 7 组 GPU 剔除检查已通过；GitHub Actions 发布和线上 HTML/JS/CSS 检查通过。**线上浏览器 GPU / Console 尚未验证**：浏览器控制工具超时后停止了 UI 操作。
+此前本地真实 WebGPU 渲染、生产子路径与 7 组 GPU 剔除检查已通过；GitHub Actions 发布和线上 HTML/JS/CSS 检查通过。用户已确认线上 Demo 正常工作；这不等于 Agent 完成了线上 Console 审计或新增 GPU 计时的验收，具体见实施记录。
 
 `npm run typecheck` 单独做类型检查；`npm test` 覆盖数学、布局、base 和设备能力失败路径。键盘 R 在画布聚焦时重置相机；支持自动环绕。不要直接双击 HTML，应使用开发/预览服务器。
 

@@ -19,6 +19,15 @@ export async function createDevice(
       "无法获取 WebGPU Adapter。请检查硬件加速、显卡驱动与浏览器的 GPU 支持状态。",
     );
   try {
+    if (adapter.features?.has("timestamp-query")) {
+      try {
+        return await adapter.requestDevice({
+          requiredFeatures: ["timestamp-query"],
+        });
+      } catch {
+        // Profiling is optional; a plain device can still render the scene.
+      }
+    }
     return await adapter.requestDevice();
   } catch (error) {
     throw new Error(`创建 GPUDevice 失败：${String(error)}`);

@@ -99,6 +99,28 @@ async function main() {
     4,
     GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
   );
+  const timestamps = gpu.features.has("timestamp-query")
+    ? gpu.createQuerySet({ type: "timestamp", count: 4 })
+    : undefined;
+  const timeResolve = timestamps
+    ? buffer(
+        "timestamp resolve",
+        32,
+        GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
+      )
+    : undefined;
+  const timeReadback = timestamps
+    ? buffer(
+        "timestamp readback",
+        32,
+        GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+      )
+    : undefined;
+  element("gpu-time").textContent = timestamps
+    ? "等待采样"
+    : "不支持 timestamp-query";
+  let timeBusy = false,
+    timingFailed = false;
   gpu.queue.writeBuffer(instances, 0, instanceData);
   gpu.queue.writeBuffer(vertices, 0, cubeData);
   const modules = [
@@ -254,6 +276,7 @@ async function main() {
     eye: Vec3,
     aspect: number,
     enabled: boolean,
+    timed = false,
   ): GPUCommandEncoder {
     const matrix = viewProjection(eye, aspect);
     floats.set(matrix, 0);
@@ -264,12 +287,27 @@ async function main() {
     // before all workgroups. Queue order makes reset → dispatch → draw explicit.
     gpu.queue.writeBuffer(indirect, 0, initialArgs);
     const encoder = gpu.createCommandEncoder();
-    const cull = encoder.beginComputePass();
+    const cull = encoder.beginComputePass({
+      timestampWrites: timed
+        ? {
+            querySet: timestamps!,
+            beginningOfPassWriteIndex: 0,
+            endOfPassWriteIndex: 1,
+          }
+        : undefined,
+    });
     cull.setPipeline(compute);
     cull.setBindGroup(0, computeGroup);
     cull.dispatchWorkgroups(Math.ceil(INSTANCE_COUNT / 64));
     cull.end();
     const pass = encoder.beginRenderPass({
+      timestampWrites: timed
+        ? {
+            querySet: timestamps!,
+            beginningOfPassWriteIndex: 2,
+            endOfPassWriteIndex: 3,
+          }
+        : undefined,
       colorAttachments: [
         {
           view: context!.getCurrentTexture().createView(),
@@ -290,6 +328,10 @@ async function main() {
     pass.setVertexBuffer(0, vertices);
     pass.drawIndirect(indirect, 0);
     pass.end();
+    if (timed) {
+      encoder.resolveQuerySet(timestamps!, 0, 4, timeResolve!, 0);
+      encoder.copyBufferToBuffer(timeResolve!, 0, timeReadback!, 0, 32);
+    }
     return encoder;
   }
 
@@ -383,14 +425,39 @@ async function main() {
         Math.sin(pitch) * radius,
         Math.cos(yaw) * Math.cos(pitch) * radius,
       ];
+      const shouldRead = !busy && now - lastRead >= 250;
+      const timed = shouldRead && !!timestamps && !timeBusy && !timingFailed;
       const encoder = encode(
         eye,
         canvas.width / canvas.height,
         culling.checked,
+        timed,
       );
-      const shouldRead = !busy && now - lastRead >= 250;
       if (shouldRead) encoder.copyBufferToBuffer(indirect, 4, readback, 0, 4);
       gpu.queue.submit([encoder.finish()]);
+      if (timed) {
+        timeBusy = true;
+        timeReadback!
+          .mapAsync(GPUMapMode.READ)
+          .then(() => {
+            const values = new BigUint64Array(timeReadback!.getMappedRange());
+            const computeNs = values[1] - values[0],
+              renderNs = values[3] - values[2];
+            timeReadback!.unmap();
+            if (!stopped)
+              element("gpu-time").textContent =
+                computeNs >= 0n && renderNs >= 0n
+                  ? `${(Number(computeNs + renderNs) / 1e6).toFixed(3)} ms`
+                  : "采样无效";
+          })
+          .catch(() => {
+            timingFailed = true;
+            if (!stopped) element("gpu-time").textContent = "计时回读失败";
+          })
+          .finally(() => {
+            timeBusy = false;
+          });
+      }
       if (shouldRead) {
         busy = true;
         lastRead = now;
@@ -440,6 +507,9 @@ async function main() {
       ])
         item.destroy();
       depth?.destroy();
+      timestamps?.destroy();
+      timeResolve?.destroy();
+      timeReadback?.destroy();
       context.unconfigure();
       gpu.destroy();
     },

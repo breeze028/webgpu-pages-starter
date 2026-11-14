@@ -2,6 +2,16 @@
 
 记录日期：2026-11-15（Asia/Shanghai）。区分工程检查、真实浏览器观察、线上 HTTP 和用户人工验收。
 
+## 后续更新：GPU 时间与英文文档
+
+用户已确认此前线上 Demo 正常工作；这是用户运行确认，不代表 Agent 的线上 Console 审计。下文初始实施中的「线上未验证」「未实现 timestamp profiling」描述保留为当时的历史记录，以本节更新为准。
+
+现在按 adapter 特性可选请求 `timestamp-query`，请求失败回退普通 device。采样帧在 Compute/Render Pass 起止写入四个时间戳，resolve 到 32 B QUERY_RESOLVE/COPY_SRC buffer（offset 0，满足 256 B offset 对齐），再复制到独立 MAP_READ/COPY_DST buffer；使用 bigint 差值，以纳秒转换毫秒。显示两段 pass 耗时之和，不包含排队、上传、回读和呈现。最多每 250 ms 异步回读一次；映射未完成时跳过计时采样。浏览器量化可能导致小负载显示零。资源在 pagehide 时释放。
+
+本地生产子路径的真实浏览器已观察到 GPU 时间 **0.066 ms** 的一次采样；GPU 剔除检查仍为 **7/7**，Console error/warn 列表为空。该数值仅证明计时链路工作，不是性能基准。新增不支持/可选设备请求失败回退测试，核心测试现为 **5/5**；类型检查、生产构建和 Skill 格式自检通过。缺特性的真实设备和线上新增计时尚未由 Agent 实测。
+
+新增 README.en.md、Skill 的 SKILL.en.md，以及 deployment.en.md / troubleshooting.en.md；保留中文 canonical SKILL.md、共享 workflow 模板，中英入口及参考文档互链。英文版覆盖构建、资源、发布、权限、独立验证和证据边界，不依赖中文参考才能执行。
+
 ## 技术选择与调研
 
 TypeScript 7、Vite 8、WGSL、npm 和原生 WebGPU，无运行时 npm 依赖、渲染引擎或后端。版本以 package-lock 为准。机器默认 Node 20.11 低于 Vite 的 20.19 / 22.12 要求，因此临时解压官方 Node 24 LTS，与 CI Node 24 一致；未更改全局安装。

@@ -1,5 +1,7 @@
 # 部署决策与配置
 
+简体中文 | [English](deployment.en.md)
+
 ## 选择构建流程
 
 | 仓库事实                   | 最小处理                                                           | artifact 目录                    |
