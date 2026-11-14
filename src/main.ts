@@ -1,4 +1,5 @@
 import "./style.css";
+import { createDevice } from "./device";
 import cullCode from "./shaders/cull.wgsl?raw";
 import renderCode from "./shaders/render.wgsl?raw";
 import {
@@ -42,26 +43,7 @@ function fail(error: unknown) {
 element("retry").onclick = () => location.reload();
 
 async function main() {
-  if (!isSecureContext)
-    throw new Error(
-      "WebGPU 需要安全上下文。请使用 HTTPS，或通过 http://localhost 本地开发。",
-    );
-  if (!navigator.gpu)
-    throw new Error(
-      "此浏览器未提供 WebGPU。请使用支持 WebGPU 的新版浏览器，并检查硬件加速、系统和显卡驱动。",
-    );
-  const adapter = await navigator.gpu.requestAdapter({
-    powerPreference: "high-performance",
-  });
-  if (!adapter)
-    throw new Error(
-      "无法获取 WebGPU Adapter。请检查硬件加速、显卡驱动与浏览器的 GPU 支持状态。",
-    );
-  try {
-    device = await adapter.requestDevice();
-  } catch (error) {
-    throw new Error(`创建 GPUDevice 失败：${String(error)}`);
-  }
+  device = await createDevice(isSecureContext, navigator.gpu);
   const gpu = device;
   gpu.lost.then((info) => {
     if (!stopped)

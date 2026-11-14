@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createDevice } from "../src/device.ts";
 import { pagesBase } from "../src/pages-base.ts";
 import { frustumPlanes, sphereVisible, viewProjection } from "../src/math.ts";
 import {
@@ -8,6 +9,24 @@ import {
   INSTANCE_COUNT,
   INSTANCE_STRIDE,
 } from "../src/scene.ts";
+
+test("capability failures distinguish insecure context, missing API, adapter and device", async () => {
+  await assert.rejects(createDevice(false, undefined), /HTTPS/);
+  await assert.rejects(createDevice(true, undefined), /未提供 WebGPU/);
+  const missingAdapter = { requestAdapter: async () => null } as unknown as GPU;
+  await assert.rejects(createDevice(true, missingAdapter), /Adapter/);
+  const failedDevice = {
+    requestAdapter: async () => ({
+      requestDevice: async () => {
+        throw new Error("test driver failure");
+      },
+    }),
+  } as unknown as GPU;
+  await assert.rejects(
+    createDevice(true, failedDevice),
+    /GPUDevice.*test driver failure/,
+  );
+});
 
 test("Pages paths cover rename, user sites, metadata and local preview", () => {
   assert.equal(pagesBase({}), "/");
