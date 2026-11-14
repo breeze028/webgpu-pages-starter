@@ -92,4 +92,6 @@ URL 加 `?validate=1` 可重复 GPU 检查；CPU oracle 只用于测试，不提
 
 ## 交付核验
 
-最终提交后的 Actions 和线上静态检查结果会在完成时补记；只将实际执行过的观察列为通过。
+交付功能提交 `26d57c5a597195b4a19e5928348d21ffe51ef42a` 的 [Actions run 43617417460](https://github.com/breeze028/webgpu-pages-starter/actions/runs/43617417460) 已完成且为 success：Linux 上的 npm ci、4 项核心测试、独立 Skill fixture 自检、类型检查、构建、上传和 deploy 全部通过。
+
+随后重新执行真实线上 `check:static`，HTML 与 `assets/index-C6xMnPME.js`、`assets/index-CjHthHDz.css` 均通过，和本地功能提交的产物名称一致。本文最后补记为文档修改；线上 GPU/Console 的未验证边界保持不变。Git 已推送 main，未提交 node_modules、dist、artifacts 或凭据。
