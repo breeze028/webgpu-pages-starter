@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10151c" />
+    <meta
+      name="description"
+      content="1,000 cubes. GPU frustum culling, compacted visibility, and indirect drawing. A native WebGPU experiment."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2310151c'/%3E%3Cpath d='M16 5 27 11v12l-11 6L5 23V11Z' fill='%238cddcd'/%3E%3C/svg%3E"
+    />
+    <title>GPU Field — WebGPU Pages Starter</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="./"
+        ><span class="brand-mark">◈</span> GPU FIELD
+        <span class="tag">WEBGPU / 001</span></a
+      ><span class="top-note"
+        >原生渲染实验 <span class="dot"></span> 无引擎 · 无后端</span
+      >
+    </header>
+    <main>
+      <section class="intro">
+        <div>
+          <p class="eyebrow">COMPUTE → CULL → DRAW</p>
+          <h1>一千个立方体，<span>一次 GPU 决策。</span></h1>
+          <p class="subtitle">从可见性判断到间接绘制，让数据留在 GPU 上。</p>
+        </div>
+        <div class="experiment">EXPERIMENT <b>01 / GPU-DRIVEN</b></div>
+      </section>
+      <div class="workbench">
+        <section class="viewport" aria-label="WebGPU 渲染视口">
+          <canvas
+            id="gpu-canvas"
+            tabindex="0"
+            aria-label="立方体场景，拖动旋转，滚轮缩放，方向键旋转"
+          ></canvas>
+          <div class="viewport-top">
+            <span
+              ><i class="dot" id="status-dot"></i
+              ><span id="status">正在初始化 WebGPU…</span></span
+            ><span class="viewport-label">PERSPECTIVE / Y-UP</span>
+          </div>
+          <div id="error" role="alert" hidden>
+            <span class="eyebrow">RENDERER UNAVAILABLE</span>
+            <h2>WebGPU 渲染不可用</h2>
+            <p id="error-message"></p>
+            <button id="retry">重新加载</button>
+          </div>
+          <div class="viewport-bottom">
+            <span
+              >拖动旋转 <span class="divider">/</span> 滚轮缩放
+              <span class="divider">/</span> 方向键</span
+            ><span id="resolution">— × —</span>
+          </div>
+          <span class="axis" aria-hidden="true"><b>Y</b> ↑<br />X ↙ · ↘ Z</span>
+        </section>
+        <aside class="panel" aria-label="调试面板">
+          <div class="panel-title">
+            <span class="eyebrow">LIVE TELEMETRY</span
+            ><span class="live">● LIVE</span>
+          </div>
+          <div class="fps-row">
+            <strong id="fps">—</strong
+            ><span>FPS<small>浏览器帧率 · 非 GPU 时间</small></span>
+          </div>
+          <div class="stats">
+            <div><span>场景实例</span><b id="total">1,000</b></div>
+            <div>
+              <span>可见实例 <small>GPU 回读</small></span
+              ><b id="visible">—</b>
+            </div>
+            <div><span>回读采样</span><b id="sample">等待 GPU</b></div>
+          </div>
+          <div class="control-section">
+            <label class="toggle-row" for="culling"
+              ><span>视锥剔除<small>Compute Frustum Culling</small></span
+              ><input type="checkbox" id="culling" checked /></label
+            ><label class="toggle-row" for="orbit"
+              ><span>自动环绕<small>Orbit Camera</small></span
+              ><input type="checkbox" id="orbit"
+            /></label>
+          </div>
+          <div class="control-section">
+            <label for="mode" class="control-label">渲染模式</label
+            ><select id="mode">
+              <option value="0">Instance Color · 实例颜色</option>
+              <option value="1">World Normal · 世界法线</option></select
+            ><label for="distance" class="control-label distance-label"
+              >相机距离 <output id="distance-value">78</output></label
+            ><input
+              type="range"
+              id="distance"
+              min="22"
+              max="145"
+              value="78"
+            /><button id="reset" class="reset">
+              ↺ <span>重置相机</span><kbd>R</kbd>
+            </button>
+          </div>
+          <p class="profiling">
+            GPU 时间 <b>未采集</b><br /><span
+              >可见数每 250 ms 异步回读；绘制不等待 CPU。</span
+            >
+          </p>
+        </aside>
+      </div>
+      <section class="pipeline" aria-label="渲染管线">
+        <div>
+          <span class="step">01</span>
+          <p>INSTANCE DATA<small>1,000 × 32 bytes</small></p>
+        </div>
+        <span class="arrow">→</span>
+        <div>
+          <span class="step">02</span>
+          <p>COMPUTE CULL<small>球体与六个视锥平面</small></p>
+        </div>
+        <span class="arrow">→</span>
+        <div>
+          <span class="step">03</span>
+          <p>COMPACT + COUNT<small>atomicAdd → visible indices</small></p>
+        </div>
+        <span class="arrow">→</span>
+        <div>
+          <span class="step">04</span>
+          <p>DRAW INDIRECT<small>GPU → GPU，零计数回传依赖</small></p>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <span
+        >WEBGPU PAGES STARTER <span class="divider">/</span> TypeScript + WGSL +
+        Vite</span
+      ><a
+        href="https://github.com/Scthe/nanite-webgpu"
+        target="_blank"
+        rel="noreferrer"
+        >参考灵感：nanite-webgpu ↗</a
+      >
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
