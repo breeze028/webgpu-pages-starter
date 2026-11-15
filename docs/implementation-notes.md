@@ -12,6 +12,8 @@
 
 新增 README.en.md、Skill 的 SKILL.en.md，以及 deployment.en.md / troubleshooting.en.md；保留中文 canonical SKILL.md、共享 workflow 模板，中英入口及参考文档互链。英文版覆盖构建、资源、发布、权限、独立验证和证据边界，不依赖中文参考才能执行。
 
+随后按用户要求，将英文设为默认 README.md，中文版保留为 README.zh-CN.md，并更新中英切换链接。
+
 ## 技术选择与调研
 
 TypeScript 7、Vite 8、WGSL、npm 和原生 WebGPU，无运行时 npm 依赖、渲染引擎或后端。版本以 package-lock 为准。机器默认 Node 20.11 低于 Vite 的 20.19 / 22.12 要求，因此临时解压官方 Node 24 LTS，与 CI Node 24 一致；未更改全局安装。
