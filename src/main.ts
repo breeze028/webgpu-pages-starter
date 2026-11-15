@@ -1,4 +1,5 @@
 import "./style.css";
+import { initializeUi } from "./ui";
 import { createDevice } from "./device";
 import cullCode from "./shaders/cull.wgsl?raw";
 import renderCode from "./shaders/render.wgsl?raw";
@@ -27,7 +28,7 @@ function fail(error: unknown) {
   element("error").hidden = false;
   element("error-message").textContent =
     error instanceof Error ? error.message : String(error);
-  element("status").textContent = "渲染已停止";
+  element("status").textContent = "Rendering stopped";
   element("status-dot").style.background = "#ef9d81";
   element("fps").textContent = "—";
   for (const control of [
@@ -49,20 +50,21 @@ async function main() {
     if (!stopped)
       fail(
         new Error(
-          `GPU Device Lost (${info.reason})：${info.message || "请重新加载页面。"}`,
+          `GPU Device Lost (${info.reason})：${info.message || "Reload the page to recover."}`,
         ),
       );
   });
   gpu.addEventListener("uncapturederror", (event) =>
-    fail(new Error(`WebGPU 错误：${event.error.message}`)),
+    fail(new Error(`WebGPU error: ${event.error.message}`)),
   );
   const context = canvas.getContext("webgpu");
-  if (!context) throw new Error("无法创建 GPUCanvasContext。");
+  if (!context) throw new Error("Unable to create GPUCanvasContext.");
   const format = navigator.gpu.getPreferredCanvasFormat();
   context.configure({ device: gpu, format, alphaMode: "opaque" });
 
   gpu.pushErrorScope("validation");
   const instanceData = createInstances();
+  initializeUi(instanceData);
   const cubeData = createCube();
   const buffer = (label: string, size: number, usage: GPUBufferUsageFlags) =>
     gpu.createBuffer({ label, size, usage });
@@ -117,8 +119,8 @@ async function main() {
       )
     : undefined;
   element("gpu-time").textContent = timestamps
-    ? "等待采样"
-    : "不支持 timestamp-query";
+    ? "Waiting for sample"
+    : "Timestamp query unsupported";
   let timeBusy = false,
     timingFailed = false;
   gpu.queue.writeBuffer(instances, 0, instanceData);
@@ -132,7 +134,7 @@ async function main() {
     const errors = info.messages.filter((message) => message.type === "error");
     if (errors.length)
       throw new Error(
-        `WGSL 编译失败：\n${errors.map((e) => `${e.lineNum}:${e.linePos} ${e.message}`).join("\n")}`,
+        `WGSL compilation failed: \n${errors.map((e) => `${e.lineNum}:${e.linePos} ${e.message}`).join("\n")}`,
       );
   }
   const compute = await gpu.createComputePipelineAsync({
@@ -179,7 +181,9 @@ async function main() {
   });
   const setupError = await gpu.popErrorScope();
   if (setupError)
-    throw new Error(`Pipeline / Buffer 初始化失败：${setupError.message}`);
+    throw new Error(
+      `Pipeline / buffer initialization failed: ${setupError.message}`,
+    );
 
   let yaw = 0.64,
     pitch = 0.67,
@@ -196,10 +200,12 @@ async function main() {
     element("distance-value").textContent = String(Math.round(radius));
   }
   element("reset").onclick = reset;
+  element<HTMLButtonElement>("reset").disabled = false;
   distance.oninput = () => {
     radius = Number(distance.value);
     syncDistance();
   };
+  distance.disabled = false;
   let pointer: { id: number; x: number; y: number } | undefined;
   canvas.onpointerdown = (event) => {
     pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
@@ -389,25 +395,27 @@ async function main() {
       results.push({ ...test, count, expected: expected.length, pass });
       staging.unmap();
       if (!pass)
-        throw new Error(`GPU 剔除验证失败：${JSON.stringify(results)}`);
+        throw new Error(
+          `GPU culling validation failed: ${JSON.stringify(results)}`,
+        );
     }
     staging.destroy();
     const error = await gpu.popErrorScope();
-    if (error) throw new Error(`GPU 验证错误：${error.message}`);
+    if (error) throw new Error(`GPU validation error: ${error.message}`);
     const details = document.createElement("details");
     details.id = "gpu-validation";
     const summary = document.createElement("summary");
-    summary.textContent = `真实 GPU 验证：${results.length}/${results.length} 通过（索引集合 + Indirect Arguments）`;
+    summary.textContent = `GPU checks: ${results.length}/${results.length} passed (indices + indirect arguments)`;
     const pre = document.createElement("pre");
     pre.textContent = JSON.stringify(results, null, 2);
     details.append(summary, pre);
-    document.querySelector("main")!.append(details);
+    element("gpu-check-results").replaceChildren(details);
     console.info("GPU validation passed", results);
   }
   resize();
   if (new URLSearchParams(location.search).has("validate")) await validateGpu();
   if (stopped) return;
-  element("status").textContent = "WebGPU 就绪 · drawIndirect";
+  element("status").textContent = "Rendering · drawIndirect";
   let last = performance.now(),
     fpsStart = last,
     fpsFrames = 0,
@@ -448,11 +456,12 @@ async function main() {
               element("gpu-time").textContent =
                 computeNs >= 0n && renderNs >= 0n
                   ? `${(Number(computeNs + renderNs) / 1e6).toFixed(3)} ms`
-                  : "采样无效";
+                  : "Invalid timing sample";
           })
           .catch(() => {
             timingFailed = true;
-            if (!stopped) element("gpu-time").textContent = "计时回读失败";
+            if (!stopped)
+              element("gpu-time").textContent = "Timing readback failed";
           })
           .finally(() => {
             timeBusy = false;
@@ -471,11 +480,12 @@ async function main() {
             if (stopped) return;
             element("visible").textContent = value.toLocaleString();
             element("sample").textContent =
-              `${sampledMode ? "剔除 ON" : "剔除 OFF"} · 250 ms`;
+              `${sampledMode ? "Culling ON" : "Culling OFF"} · 250 ms`;
           })
           .catch((error) => {
             busy = false;
-            if (!stopped) fail(new Error(`GPU 回读失败：${String(error)}`));
+            if (!stopped)
+              fail(new Error(`GPU readback failed: ${String(error)}`));
           });
       }
       fpsFrames++;

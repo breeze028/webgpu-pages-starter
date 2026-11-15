@@ -12,7 +12,10 @@ import {
 
 test("capability failures distinguish insecure context, missing API, adapter and device", async () => {
   await assert.rejects(createDevice(false, undefined), /HTTPS/);
-  await assert.rejects(createDevice(true, undefined), /未提供 WebGPU/);
+  await assert.rejects(
+    createDevice(true, undefined),
+    /does not provide WebGPU/,
+  );
   const missingAdapter = { requestAdapter: async () => null } as unknown as GPU;
   await assert.rejects(createDevice(true, missingAdapter), /Adapter/);
   const failedDevice = {

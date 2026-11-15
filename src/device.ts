@@ -5,18 +5,18 @@ export async function createDevice(
 ): Promise<GPUDevice> {
   if (!secure)
     throw new Error(
-      "WebGPU 需要安全上下文。请使用 HTTPS，或通过 http://localhost 本地开发。",
+      "WebGPU requires a secure context. Use HTTPS or http://localhost for local development.",
     );
   if (!gpu)
     throw new Error(
-      "此浏览器未提供 WebGPU。请使用支持 WebGPU 的新版浏览器，并检查硬件加速、系统和显卡驱动。",
+      "This browser does not provide WebGPU. Use a compatible browser and check hardware acceleration, system support and graphics drivers.",
     );
   const adapter = await gpu.requestAdapter({
     powerPreference: "high-performance",
   });
   if (!adapter)
     throw new Error(
-      "无法获取 WebGPU Adapter。请检查硬件加速、显卡驱动与浏览器的 GPU 支持状态。",
+      "No WebGPU Adapter is available. Check hardware acceleration, graphics drivers and browser GPU support.",
     );
   try {
     if (adapter.features?.has("timestamp-query")) {
@@ -30,6 +30,6 @@ export async function createDevice(
     }
     return await adapter.requestDevice();
   } catch (error) {
-    throw new Error(`创建 GPUDevice 失败：${String(error)}`);
+    throw new Error(`GPUDevice creation failed: ${String(error)}`);
   }
 }

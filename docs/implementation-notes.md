@@ -16,6 +16,22 @@
 
 ## 技术选择与调研
 
+### 后续 UI 试用：renderer-ui-design
+
+按用户请求应用本地 `renderer-ui-design` Skill：默认英文 Showcase、深灰/Sage 界面、Inspect 的 Explorer/Viewport/Properties 分工，以及默认关闭的诊断区。原生 TS/DOM 工程保持不变，没有增加框架或修改 WGSL、几何生成、GPU 剔除与计时算法。
+
+新增 `src/ui.ts` 只持有布局、过滤、选择与属性标签状态，读取同一份实际上传 GPU 的 Float32 实例数组；1002 个逻辑节点对应 scene + shared geometry + 1000 instances。选择仅查看元数据，不代表 viewport picking、高亮或编辑。属性保留完整原值，并明确程序化来源、buffer offset、stride 和共享几何引用。原有动态分辨率策略继续管理 canvas/backbuffer/depth/camera aspect；面板调整不重建设备、实例 buffer 或 pipeline。
+
+真实生产子路径浏览器检查覆盖 1440×900 三栏、1050×900 单侧抽屉、390×844 移动布局及默认桌面 Showcase。已观察到：
+
+- 1002 个逻辑节点只挂载约 20 行；End 可选中离屏 Cube 0999（末尾约 16 行），搜索 instance-42 得 11 项，空搜索结果挂载 0 行。
+- Properties 与 Raw data 保留 Float32 精度；分隔条方向键将 Explorer 宽度从 260 调到 276；相机距离 22 在模式切换后保持，不被重置。
+- 移动端 document clientWidth / scrollWidth 均为 390；抽屉选择后焦点进入属性标签，Escape 关闭并回到 opener；从桌面双侧栏缩到窄屏只保留一侧，Popover 与抽屉避免叠开。
+- 剔除关闭后 GPU 回读 1000，World normal/相机重置可用；全屏实际进入和退出成功。GPU 计时继续更新，诊断区显示真实 GPU checks 7/7，最终 Console error/warn 为空。
+- 核心测试 5/5、类型检查、生产构建和生产子路径 HTML/JS/CSS 检查通过。没有以本次 FPS 数值声称 UI 带来 GPU 算法或性能提升。
+
+本地真实截图位于忽略的 artifacts/ui：inspect-1440.jpg、inspect-1050.jpg、showcase-mobile.jpg。另一张 resize 紧接捕获的 Showcase 截图尺寸异常，已排除，不作为布局证据。UI 改版尚未做跨浏览器、真实无 GPU 界面和独立浏览器全屏拒绝场景验收；本节是 Agent 观察，不替代用户人工验收。
+
 TypeScript 7、Vite 8、WGSL、npm 和原生 WebGPU，无运行时 npm 依赖、渲染引擎或后端。版本以 package-lock 为准。机器默认 Node 20.11 低于 Vite 的 20.19 / 22.12 要求，因此临时解压官方 Node 24 LTS，与 CI Node 24 一致；未更改全局安装。
 
 实际阅读 [nanite-webgpu](https://github.com/Scthe/nanite-webgpu) 的 README、package.json、esbuild-script.js、static/index.html、目录树和 [.github/workflows/main.yml](https://github.com/Scthe/nanite-webgpu/blob/master/.github/workflows/main.yml)：

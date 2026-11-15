@@ -25,6 +25,14 @@ FPS measures browser frame rate. Visible instance counts come from asynchronous 
 
 ## Rendering and data layout
 
+### Showcase and Inspect
+
+The default **Showcase** workspace prioritizes the live viewport. The compact toolbar provides camera reset, automatic orbit, render settings, fullscreen (when permitted by the host), and help. The bottom HUD reports real frame rate, visible instances, GPU pass time, and backing resolution.
+
+**Inspect** adds a searchable, type-filtered Scene Explorer and read-only Properties / Raw data. Its 1,002 logical nodes represent the scene, shared cube geometry, and the actual 1,000 instance records; only visible rows plus overscan are mounted. Arrow keys, Home/End, and Page Up/Down navigate the focused list. Desktop sidebars can be resized by dragging their divider or using its arrow keys; narrower layouts use drawers with Escape-to-close and focus return. Diagnostics are closed by default and contain the optional GPU-check results.
+
+Selection inspects metadata only; it does not pick, highlight, or edit cubes. Float32 parameters remain available at full precision. Workspace changes retain the same renderer and camera. This demo keeps its original dynamic-resolution policy: changing viewport area updates the canvas backbuffer, depth texture, and camera aspect without reloading instance buffers or pipelines.
+
 ```text
 CPU: upload instances once + update camera matrix / six normalized planes
        |

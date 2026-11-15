@@ -1,146 +1,407 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#10151c" />
+    <meta name="theme-color" content="#121414" />
     <meta
       name="description"
-      content="1,000 cubes. GPU frustum culling, compacted visibility, and indirect drawing. A native WebGPU experiment."
+      content="A native WebGPU field of 1,000 cubes. Compute culling and indirect drawing, inspected live."
     />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2310151c'/%3E%3Cpath d='M16 5 27 11v12l-11 6L5 23V11Z' fill='%238cddcd'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23121414'/%3E%3Cpath d='m16 5 11 6-11 6-11-6Zm-11 12 11 6 11-6M5 23l11 6 11-6' fill='none' stroke='%23b2c5a8' stroke-width='2'/%3E%3C/svg%3E"
     />
     <title>GPU Field — WebGPU Pages Starter</title>
   </head>
-  <body>
+  <body data-mode="showcase">
+    <svg
+      class="icon-defs"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <defs>
+        <symbol id="i-layers" viewBox="0 0 24 24">
+          <path d="m12 3 9 5-9 5-9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" />
+        </symbol>
+        <symbol id="i-reset" viewBox="0 0 24 24">
+          <path d="M4 9a8 8 0 1 1-1 6M4 3v6h6" />
+        </symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24">
+          <path d="M4 7h16M4 17h16M8 4v6M16 14v6" />
+        </symbol>
+        <symbol id="i-full" viewBox="0 0 24 24">
+          <path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6" />
+        </symbol>
+        <symbol id="i-help" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.5 9a2.5 2.5 0 1 1 4.3 1.7L12 12v2m0 3v.1" />
+        </symbol>
+      </defs>
+    </svg>
     <header class="topbar">
       <a class="brand" href="./"
-        ><span class="brand-mark">◈</span> GPU FIELD
-        <span class="tag">WEBGPU / 001</span></a
-      ><span class="top-note"
-        >原生渲染实验 <span class="dot"></span> 无引擎 · 无后端</span
+        ><svg><use href="#i-layers" /></svg><b>GPU</b> Field
+        <span class="version">01</span></a
+      >
+      <div class="scene-picker">
+        <span class="eyebrow">SCENE</span><span>Procedural cube field</span
+        ><small>1,000 instances</small>
+      </div>
+      <nav class="mode-switch" aria-label="Workspace mode">
+        <button id="showcase" disabled aria-pressed="true">Showcase</button
+        ><button id="inspect" disabled aria-pressed="false">Inspect</button>
+      </nav>
+      <a
+        class="source-link"
+        href="https://github.com/breeze028/webgpu-pages-starter"
+        target="_blank"
+        rel="noreferrer"
+        >Source ↗</a
       >
     </header>
-    <main>
-      <section class="intro">
-        <div>
-          <p class="eyebrow">COMPUTE → CULL → DRAW</p>
-          <h1>一千个立方体，<span>一次 GPU 决策。</span></h1>
-          <p class="subtitle">从可见性判断到间接绘制，让数据留在 GPU 上。</p>
+    <main id="workspace" class="workspace">
+      <aside
+        id="explorer"
+        class="sidebar explorer"
+        aria-label="Scene Explorer"
+        hidden
+      >
+        <div class="side-heading">
+          <h2>
+            <svg><use href="#i-layers" /></svg>Scene Explorer
+          </h2>
+          <button
+            class="close"
+            data-close="explorer"
+            aria-label="Close Scene Explorer"
+            title="Close Scene Explorer"
+          >
+            ×
+          </button>
         </div>
-        <div class="experiment">EXPERIMENT <b>01 / GPU-DRIVEN</b></div>
-      </section>
-      <div class="workbench">
-        <section class="viewport" aria-label="WebGPU 渲染视口">
+        <div class="search-controls">
+          <label class="sr-only" for="search">Search scene nodes</label
+          ><input
+            id="search"
+            type="search"
+            placeholder="Search name or instance ID…"
+          /><label class="sr-only" for="type-filter">Node type</label
+          ><select id="type-filter">
+            <option value="all">All node types</option>
+            <option value="scene">Scene</option>
+            <option value="geometry">Geometry</option>
+            <option value="instance">Instances</option>
+          </select>
+        </div>
+        <div
+          id="node-list"
+          class="node-list"
+          role="listbox"
+          aria-label="Scene nodes"
+          tabindex="0"
+        >
+          <div id="node-spacer"></div>
+          <div id="node-rows"></div>
+        </div>
+        <div id="empty-list" class="empty" hidden>No matching nodes.</div>
+        <div id="node-count" class="side-footer">Loading scene data…</div>
+      </aside>
+      <div
+        class="splitter left-splitter"
+        role="separator"
+        tabindex="0"
+        aria-label="Explorer width"
+        aria-orientation="vertical"
+        aria-valuemin="220"
+        aria-valuemax="420"
+        aria-valuenow="260"
+        hidden
+      ></div>
+      <section class="center">
+        <div class="scene-heading">
+          <div>
+            <p class="eyebrow">NATIVE WEBGPU / COMPUTE + GRAPHICS</p>
+            <h1>Procedural cube field</h1>
+            <p class="scene-description">A thousand forms. One GPU decision.</p>
+          </div>
+          <div class="panel-actions">
+            <button
+              id="explorer-toggle"
+              aria-expanded="false"
+              aria-controls="explorer"
+            >
+              <svg><use href="#i-layers" /></svg>Explorer</button
+            ><button
+              id="properties-toggle"
+              aria-expanded="false"
+              aria-controls="properties"
+            >
+              Properties
+            </button>
+          </div>
+        </div>
+        <div class="viewport" aria-label="WebGPU viewport">
           <canvas
             id="gpu-canvas"
             tabindex="0"
-            aria-label="立方体场景，拖动旋转，滚轮缩放，方向键旋转"
+            aria-label="Cube field. Drag or use arrow keys to orbit; scroll to zoom; R to reset."
           ></canvas>
-          <div class="viewport-top">
-            <span
-              ><i class="dot" id="status-dot"></i
-              ><span id="status">正在初始化 WebGPU…</span></span
-            ><span class="viewport-label">PERSPECTIVE / Y-UP</span>
-          </div>
           <div id="error" role="alert" hidden>
-            <span class="eyebrow">RENDERER UNAVAILABLE</span>
-            <h2>WebGPU 渲染不可用</h2>
+            <p class="eyebrow">RENDERER UNAVAILABLE</p>
+            <h2>WebGPU is unavailable</h2>
             <p id="error-message"></p>
-            <button id="retry">重新加载</button>
+            <button id="retry">Reload page</button>
           </div>
-          <div class="viewport-bottom">
-            <span
-              >拖动旋转 <span class="divider">/</span> 滚轮缩放
-              <span class="divider">/</span> 方向键</span
-            ><span id="resolution">— × —</span>
+        </div>
+        <div class="toolbar-area">
+          <div class="toolbar" aria-label="Viewport controls">
+            <button
+              id="reset"
+              disabled
+              class="icon-button"
+              title="Reset camera (R while canvas is focused)"
+              aria-label="Reset camera"
+            >
+              <svg><use href="#i-reset" /></svg></button
+            ><label class="orbit-control" title="Automatically orbit the camera"
+              ><input id="orbit" type="checkbox" />Auto orbit</label
+            ><span class="tool-divider"></span
+            ><button
+              id="settings-toggle"
+              disabled
+              class="icon-button"
+              title="Render settings"
+              aria-label="Render settings"
+              aria-expanded="false"
+              aria-controls="settings"
+            >
+              <svg><use href="#i-settings" /></svg></button
+            ><button
+              id="fullscreen"
+              disabled
+              class="icon-button"
+              title="Toggle fullscreen"
+              aria-label="Toggle fullscreen"
+            >
+              <svg><use href="#i-full" /></svg></button
+            ><button
+              id="help-toggle"
+              disabled
+              class="icon-button"
+              title="Camera controls"
+              aria-label="Camera controls"
+              aria-expanded="false"
+              aria-controls="help"
+            >
+              <svg><use href="#i-help" /></svg>
+            </button>
           </div>
-          <span class="axis" aria-hidden="true"><b>Y</b> ↑<br />X ↙ · ↘ Z</span>
-        </section>
-        <aside class="panel" aria-label="调试面板">
-          <div class="panel-title">
-            <span class="eyebrow">LIVE TELEMETRY</span
-            ><span class="live">● LIVE</span>
-          </div>
-          <div class="fps-row">
-            <strong id="fps">—</strong
-            ><span>FPS<small>浏览器帧率 · 非 GPU 时间</small></span>
-          </div>
-          <div class="stats">
-            <div><span>场景实例</span><b id="total">1,000</b></div>
-            <div>
-              <span>可见实例 <small>GPU 回读</small></span
-              ><b id="visible">—</b>
+          <section
+            id="settings"
+            class="popover"
+            aria-label="Render settings"
+            hidden
+          >
+            <div class="popover-heading">
+              <h2>Render settings</h2>
+              <button
+                class="close"
+                data-close="settings"
+                aria-label="Close render settings"
+              >
+                ×
+              </button>
             </div>
-            <div><span>回读采样</span><b id="sample">等待 GPU</b></div>
-          </div>
-          <div class="control-section">
             <label class="toggle-row" for="culling"
-              ><span>视锥剔除<small>Compute Frustum Culling</small></span
-              ><input type="checkbox" id="culling" checked /></label
-            ><label class="toggle-row" for="orbit"
-              ><span>自动环绕<small>Orbit Camera</small></span
-              ><input type="checkbox" id="orbit"
-            /></label>
-          </div>
-          <div class="control-section">
-            <label for="mode" class="control-label">渲染模式</label
+              ><span>Frustum culling<small>GPU compute pass</small></span
+              ><input id="culling" type="checkbox" checked /></label
+            ><label for="mode">Shading</label
             ><select id="mode">
-              <option value="0">Instance Color · 实例颜色</option>
-              <option value="1">World Normal · 世界法线</option></select
-            ><label for="distance" class="control-label distance-label"
-              >相机距离 <output id="distance-value">78</output></label
+              <option value="0">Instance color</option>
+              <option value="1">World normal</option></select
+            ><label class="range-label" for="distance"
+              >Camera distance <output id="distance-value">78</output></label
             ><input
-              type="range"
               id="distance"
+              disabled
+              type="range"
               min="22"
               max="145"
               value="78"
-            /><button id="reset" class="reset">
-              ↺ <span>重置相机</span><kbd>R</kbd>
-            </button>
-          </div>
-          <p class="profiling">
-            GPU 时间 <b id="gpu-time" title="Compute + Render Pass 时间之和；不含排队、上传、回读和呈现。浏览器可能量化时间戳。">等待初始化</b><br /><span
-              >可见数每 250 ms 异步回读；绘制不等待 CPU。</span
-            >
-          </p>
-        </aside>
-      </div>
-      <section class="pipeline" aria-label="渲染管线">
-        <div>
-          <span class="step">01</span>
-          <p>INSTANCE DATA<small>1,000 × 32 bytes</small></p>
+            />
+            <p class="note">
+              GPU telemetry is sampled asynchronously, at most every 250 ms.
+            </p>
+          </section>
+          <section
+            id="help"
+            class="popover"
+            aria-label="Camera controls"
+            hidden
+          >
+            <div class="popover-heading">
+              <h2>Camera controls</h2>
+              <button
+                class="close"
+                data-close="help"
+                aria-label="Close camera controls"
+              >
+                ×
+              </button>
+            </div>
+            <dl class="help-keys">
+              <dt>Drag / Arrow keys</dt>
+              <dd>Orbit camera</dd>
+              <dt>Scroll</dt>
+              <dd>Zoom</dd>
+              <dt>R · canvas focused</dt>
+              <dd>Reset camera</dd>
+              <dt>Escape</dt>
+              <dd>Close active panel</dd>
+            </dl>
+            <p class="note">
+              Explorer selection inspects metadata only. No viewport picking or
+              editing.
+            </p>
+          </section>
         </div>
-        <span class="arrow">→</span>
-        <div>
-          <span class="step">02</span>
-          <p>COMPUTE CULL<small>球体与六个视锥平面</small></p>
-        </div>
-        <span class="arrow">→</span>
-        <div>
-          <span class="step">03</span>
-          <p>COMPACT + COUNT<small>atomicAdd → visible indices</small></p>
-        </div>
-        <span class="arrow">→</span>
-        <div>
-          <span class="step">04</span>
-          <p>DRAW INDIRECT<small>GPU → GPU，零计数回传依赖</small></p>
-        </div>
+        <div id="ui-message" role="status" aria-live="polite"></div>
       </section>
-    </main>
-    <footer>
-      <span
-        >WEBGPU PAGES STARTER <span class="divider">/</span> TypeScript + WGSL +
-        Vite</span
-      ><a
-        href="https://github.com/Scthe/nanite-webgpu"
-        target="_blank"
-        rel="noreferrer"
-        >参考灵感：nanite-webgpu ↗</a
+      <div
+        class="splitter right-splitter"
+        role="separator"
+        tabindex="0"
+        aria-label="Properties width"
+        aria-orientation="vertical"
+        aria-valuemin="260"
+        aria-valuemax="480"
+        aria-valuenow="300"
+        hidden
+      ></div>
+      <aside
+        id="properties"
+        class="sidebar properties"
+        aria-label="Properties"
+        hidden
       >
+        <div class="side-heading">
+          <h2>Properties <small>READ ONLY</small></h2>
+          <button
+            class="close"
+            data-close="properties"
+            aria-label="Close Properties"
+            title="Close Properties"
+          >
+            ×
+          </button>
+        </div>
+        <div class="selected-heading">
+          <p class="eyebrow" id="selected-type">SCENE</p>
+          <h3 id="selected-name">Procedural cube field</h3>
+        </div>
+        <div class="property-tabs" role="tablist" aria-label="Property view">
+          <button
+            id="structured-tab"
+            role="tab"
+            aria-selected="true"
+            aria-controls="structured"
+          >
+            Properties</button
+          ><button
+            id="raw-tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="raw"
+          >
+            Raw data
+          </button>
+        </div>
+        <div
+          id="structured"
+          role="tabpanel"
+          aria-labelledby="structured-tab"
+          tabindex="0"
+        ></div>
+        <pre
+          id="raw"
+          role="tabpanel"
+          aria-labelledby="raw-tab"
+          tabindex="0"
+          hidden
+        ></pre>
+        <div class="side-footer">
+          Original Float32 values · metadata selection
+        </div>
+      </aside>
+    </main>
+    <section
+      id="diagnostics"
+      class="diagnostics"
+      aria-label="Diagnostics"
+      hidden
+    >
+      <div class="side-heading">
+        <h2>Diagnostics</h2>
+        <button
+          class="close"
+          data-close="diagnostics"
+          aria-label="Close diagnostics"
+        >
+          ×
+        </button>
+      </div>
+      <div class="diagnostic-body">
+        <div>
+          <h3>Compute → Compact → Draw</h3>
+          <p>
+            Instance data → sphere/frustum tests → atomic visible indices & draw
+            count → drawIndirect().
+          </p>
+          <p>
+            GPU time sums compute and render passes. It excludes queue wait,
+            uploads, readback and presentation; browser timestamps may be
+            quantized.
+          </p>
+          <p id="sample">Waiting for GPU readback</p>
+          <a href="?validate=1">Reload and run 7 GPU correctness checks ↗</a>
+          <p class="note">
+            Explicit reload initializes a new renderer. Workspace changes do
+            not.
+          </p>
+        </div>
+        <div id="gpu-check-results">
+          <h3>GPU correctness checks</h3>
+          <p>
+            Not run in this session. Use the explicit check link to run them.
+          </p>
+        </div>
+      </div>
+    </section>
+    <footer class="statusbar">
+      <span class="render-status"
+        ><i id="status-dot" class="dot"></i
+        ><span id="status">Initializing WebGPU…</span></span
+      >
+      <div class="hud">
+        <span><b id="fps">—</b> <small>FPS</small></span
+        ><span
+          ><b id="visible">—</b> / <b id="total">1,000</b>
+          <small>visible</small></span
+        ><span
+          id="gpu-time"
+          title="Compute + render GPU pass durations; asynchronous readback, potentially quantized."
+          >Waiting for GPU time</span
+        ><span id="resolution">— × —</span>
+      </div>
+      <button
+        id="diagnostics-toggle"
+        disabled
+        aria-expanded="false"
+        aria-controls="diagnostics"
+      >
+        Diagnostics
+      </button>
     </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>

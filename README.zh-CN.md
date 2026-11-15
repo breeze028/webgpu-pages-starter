@@ -26,6 +26,14 @@ npm run preview
 
 ## 数据与渲染流程
 
+### Showcase 与 Inspect
+
+默认 Showcase 以真实画面为主，底部工具栏提供相机重置、自动环绕、渲染设置、全屏（宿主允许时）和帮助；HUD 显示真实帧率、可见数、GPU Pass 时间及 backbuffer 尺寸。
+
+Inspect 提供搜索、类型过滤、虚拟 Scene Explorer 和只读 Properties / Raw data。1002 个逻辑节点对应场景、共享立方体几何及真实的 1000 条实例记录，只挂载可视行及少量 overscan。列表支持方向键、Home/End、Page Up/Down；桌面分隔条可拖动或用方向键调整宽度，窄屏采用抽屉，Escape 关闭并恢复焦点。诊断默认收起，GPU 自检结果放在其中。
+
+选择仅用于元数据检查，不代表拾取、高亮或编辑；Float32 原值完整保留。模式切换不重建 renderer 或重置相机。沿用原有动态分辨率策略，视口面积变化时更新 backbuffer、depth 与 camera aspect，但不重载实例 buffer 或 pipeline。
+
 ```text
 CPU: instance upload (once) + camera matrix / 6 normalized planes
               |
